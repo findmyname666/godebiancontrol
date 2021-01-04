@@ -11,6 +11,50 @@ import (
 	"testing"
 )
 
+func TestString(t *testing.T) {
+	content := bytes.NewBufferString(`Package: bti
+Binary: bti
+Version: 032-1
+Maintainer: gregor herrmann <gregoa@debian.org>
+Uploaders: tony mancill <tmancill@debian.org>
+Build-Depends: debhelper (>= 8),
+  bash-completion (>= 1:1.1-3),
+  libcurl4-nss-dev, libreadline-dev, libxml2-dev, libpcre3-dev, liboauth-dev, xsltproc, docbook-xsl, docbook-xml, dh-autoreconf
+Architecture: any
+Standards-Version: 3.9.2
+Format: 3.0 (quilt)
+Files:
+ 3d5f65778bf3f89be03c313b0024b62c 1980 bti_032-1.dsc
+ 1e0d0b693fdeebec268004ba41701baf 59773 bti_032.orig.tar.gz
+ ac1229a6d685023aeb8fcb0806324aa8 5065 bti_032-1.debian.tar.gz
+Vcs-Browser: http://svn.toastfreeware.priv.at/wsvn/ToastfreewareDebian/bti/trunk/
+Vcs-Svn: http://svn.toastfreeware.priv.at/debian/bti/trunk/
+Checksums-Sha1:
+ 3da2c5a42138c884a7d9524b9706dc56c0d6d46e 1980 bti_032-1.dsc
+ 22061e3f56074703be415d65abc9ca27ef775c6a 59773 bti_032.orig.tar.gz
+ 66ae7f56a3c1f0ebe0638d0ec0599a819d72baea 5065 bti_032-1.debian.tar.gz
+Checksums-Sha256:
+ ed6015b79693f270d0a826c695b40e4d8eb4307942cac81a98f1fda479f74215 1980 bti_032-1.dsc
+ feeabec98a89040a53283d798f7d55eb4311a854f17312a177dc45919883746a 59773 bti_032.orig.tar.gz
+ f025da42efaf57db5e71a14cb8be27eb802ad23e7ab02b7ce2252454a86ac1d9 5065 bti_032-1.debian.tar.gz
+Homepage: http://gregkh.github.com/bti/
+Package-List:
+ bti deb net extra
+Directory: pool/main/b/bti
+Priority: source
+Section: net`)
+	paragraphs, err := godebiancontrol.Parse(content)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resStr := paragraphs[0].String()
+	inpStr := content.String()
+	if resStr != inpStr {
+		t.Fatal("Paragraph converted to string is different as expected :D ")
+	}
+
+}
+
 func TestParse(t *testing.T) {
 	contents := bytes.NewBufferString(`Package: bti
 Binary: bti

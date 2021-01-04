@@ -6,6 +6,7 @@ package godebiancontrol
 
 import (
 	"bufio"
+	"bytes"
 	"io"
 	"strings"
 	"unicode"
@@ -21,7 +22,10 @@ const (
 
 var fieldType = make(map[string]FieldType)
 
-type Paragraph map[string]string
+type Paragraph struct {
+	Fields map[string]string
+	Order []string
+}
 
 func init() {
 	fieldType["Description"] = Multiline
@@ -42,8 +46,7 @@ func init() {
 // http://www.debian.org/doc/debian-policy/ch-controlfields.html
 func Parse(input io.Reader) (paragraphs []Paragraph, err error) {
 	reader := bufio.NewReader(input)
-	lastkey := ""
-	var paragraph Paragraph = make(Paragraph)
+	var paragraph Paragraph
 
 	for {
 		line, err := reader.ReadString('\n')
@@ -59,39 +62,101 @@ func Parse(input io.Reader) (paragraphs []Paragraph, err error) {
 		// Check if the line is empty (or consists only of whitespace). This
 		// marks a new paragraph.
 		if trimmed == "" {
-			if len(paragraph) > 0 {
+			if len(paragraph.Fields) > 0 {
 				paragraphs = append(paragraphs, paragraph)
 			}
-			paragraph = make(Paragraph)
+			paragraph = Paragraph{}
 			continue
 		}
 
 		// folded and multiline fields must start with a space or tab.
 		if line[0] == ' ' || line[0] == '\t' {
-			if fieldType[lastkey] == Multiline {
+			lastKey := paragraph.Order[len(paragraph.Order) - 1]
+			if fieldType[lastKey] == Multiline {
 				// Whitespace, including newlines, is significant in the values
 				// of multiline fields, therefore we just append the line
 				// as-is.
-				paragraph[lastkey] += line
+				paragraph.Fields[lastKey] += line
 			} else {
 				// For folded lines we strip whitespace before appending.
-				paragraph[lastkey] += trimmed
+				paragraph.Fields[lastKey] += trimmed
 			}
 		} else {
 			split := strings.Split(trimmed, ":")
 			key := split[0]
 			value := strings.TrimLeftFunc(trimmed[len(key)+1:], unicode.IsSpace)
-			paragraph[key] = value
-			lastkey = key
+			paragraph.Fields[key] = value
+			paragraph.Order = append(paragraph.Order, key)
 		}
 	}
 
 	// Append last paragraph, but only if it is non-empty.
 	// The case of an empty last paragraph happens when the file ends with a
 	// blank line.
-	if len(paragraph) > 0 {
+	if len(paragraph.Fields) > 0 {
 		paragraphs = append(paragraphs, paragraph)
 	}
 
 	return
+}
+
+// Convert paragraph to string.
+func (p *Paragraph) String() string {
+	var buff bytes.Buffer
+
+	for _, k := range p.Order {
+		v, ok := p.Fields[k]
+
+		// skip keys without values
+		if !ok {
+			continue
+		}
+
+		// Multiline fields contains line endings.
+		// To make it uniform let's strip them and add one.
+		vTrimmed := strings.TrimRight(v, "\n")
+		buff.WriteString(k + ": " + vTrimmed + "\n")
+	}
+	return buff.String()
+}
+
+// Insert k, v fields into paragraph map. If k already exists v is replaced.
+func (p *Paragraph) Set(k, v string) {
+	p.Fields[k] = v
+	p.Order = append(p.Order, k)
+}
+
+func (p *Paragraph) Get(k string) string {
+	return p.Fields[k]
+}
+
+func (p *Paragraph) Len() int {
+	return len(p.Fields)
+}
+
+func (p *Paragraph) Del(k string) {
+	if _, ok := p.Fields[k]; !ok {
+		return
+	}
+
+	delete(p.Fields, k)
+	delItemSlice(k, p.Order)
+}
+
+func delItemSlice(x string, s []string) []string {
+	i := getItemPositionSlice(x, s)
+	return delIndexSlice(i, s)
+}
+
+func getItemPositionSlice(x string, s []string) int {
+	for i, v := range s {
+		if x == v {
+			return i
+		}
+	}
+	return -1
+}
+
+func delIndexSlice(i int, s []string) []string {
+	return append(s[:i], s[i+1:]...)
 }
