@@ -72,7 +72,9 @@ func Parse(input io.Reader) (paragraphs []Paragraph, err error) {
 			// Let's keep the lines in the original state.
 			// Last key can be empty when paragraph is empty but it doesn't
 			// doesn't affect our use-case.
-			paragraph.Fields[paragraph.LastKey()] += line
+			lastKey := paragraph.LastKey()
+			lPrev := paragraph.Get(lastKey)
+			paragraph.Set(lastKey, lPrev + line)
 			continue
 		}
 
@@ -95,7 +97,7 @@ func Parse(input io.Reader) (paragraphs []Paragraph, err error) {
 	// Trim values from right.
 	for _, p := range paragraphs {
 		for k, v := range p.Fields {
-			p.Fields[k] = strings.TrimRightFunc(v, unicode.IsSpace)
+			p.Set(k, strings.TrimRightFunc(v, unicode.IsSpace))
 		}
 	}
 
@@ -112,14 +114,14 @@ func extractKV(l string) (k, v string) {
 }
 
 // Convert paragraph to bytes buffer.
-func (p *Paragraph) Bytes() bytes.Buffer {
+func (p *Paragraph) Bytes() *bytes.Buffer {
 	var buff bytes.Buffer
 
 	for _, k := range p.Order {
-		v, ok := p.Fields[k]
+		v := p.Get(k)
 
 		// skip keys without values
-		if !ok {
+		if v == "" {
 			continue
 		}
 
@@ -135,7 +137,7 @@ func (p *Paragraph) Bytes() bytes.Buffer {
 		}
 		buff.WriteString(vTrimmed + "\n")
 	}
-	return buff
+	return &buff
 }
 
 // Convert paragraph to string.
@@ -147,7 +149,7 @@ func (p *Paragraph) String() string {
 
 // Convert paragraphs to bytes buffer. Each paragraph is separated with
 // the new line.
-func ParagraphsToBytes(paragraphs []Paragraph) bytes.Buffer {
+func ParagraphsToBytes(paragraphs []Paragraph) *bytes.Buffer {
 	var buff bytes.Buffer
 	paragraphsCount := len(paragraphs) - 1
 
@@ -162,7 +164,7 @@ func ParagraphsToBytes(paragraphs []Paragraph) bytes.Buffer {
 		buff.WriteString("\n")
 	}
 
-	return buff
+	return &buff
 }
 
 // Convert paragraphs to multi-line string. Each paragraph is separated with
@@ -176,8 +178,13 @@ func ParagraphsToText(paragraphs []Paragraph) string {
 // Insert field (k) and its value (v) into paragraph map.
 // If field exists already its value is replaced.
 func (p *Paragraph) Set(k, v string) {
-	p.Fields[k] = v
-	p.Order = append(p.Order, k)
+	vOld := p.Get(k)
+
+	if vOld == "" {
+		p.Order = append(p.Order, k)
+	}
+
+	p.Set(k, v)
 }
 
 // Get field value based on field name (k).
