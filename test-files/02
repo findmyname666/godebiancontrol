@@ -1,0 +1,28 @@
+Package: i3-wm
+Version: 4.2-1
+Installed-Size: 1573
+Maintainer: Michael Stapelberg <stapelberg@debian.org>
+Architecture: amd64
+Provides: x-window-manager
+Depends: libc6 (>= 2.8), libev4 (>= 1:4.04), libpcre3 (>= 8.10), libstartup-notification0 (>= 0.10), libx11-6, libxcb-icccm4 (>= 0.3.8), libxcb-keysyms1 (>= 0.3.8), libxcb-randr0 (>= 1.3), libxcb-util0 (>= 0.3.8), libxcb-xinerama0, libxcb1, libxcursor1 (>> 1.1.2), libyajl2 (>= 2.0.4), perl, x11-utils
+Recommends: xfonts-base
+Suggests: rxvt-unicode | x-terminal-emulator
+Description-en: improved dynamic tiling window manager
+ Key features of i3 are good documentation, reasonable defaults (changeable in
+ a simple configuration file) and good multi-monitor support. The user
+ interface is designed for power users and emphasizes keyboard usage. i3 uses
+ XCB for asynchronous communication with X11 and aims to be fast and
+ light-weight.
+ .
+ Please be aware i3 is primarily targeted at advanced users and developers.
+Homepage: http://i3wm.org/
+Description-md5: 2be7e62f455351435b1e055745d3e81c
+Tag: implemented-in::c, interface::x11, role::program, uitoolkit::TODO,
+ works-with::unicode, x11::window-manager
+Section: x11
+Priority: extra
+Filename: pool/main/i/i3-wm/i3-wm_4.2-1_amd64.deb
+Size: 798186
+MD5sum: 3c7dbecd76d5c271401860967563fa8c
+SHA1: 2e94f3faa5d4d617061f94076b2537d15fbff73f
+SHA256: 2894bc999b3982c4e57f100fa31e21b52e14c5f3bc7ad5345f46842fcdab0db7

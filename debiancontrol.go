@@ -1,12 +1,14 @@
 // vim:ts=4:sw=4:noexpandtab
 // © 2012-2014 Michael Stapelberg (see also: LICENSE)
 
-// Package debiancontrol implements a parser for Debian control files.
+// Package debiancontrol implements a parser for Debian files
+// such package control file, mirror Packages and Release files.
 package godebiancontrol
 
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"io"
 	"strings"
 	"unicode"
@@ -20,23 +22,19 @@ const (
 	Multiline
 )
 
-var fieldType = make(map[string]FieldType)
-
 type Paragraph struct {
-	Fields map[string]string
-	Order []string
+	Fields    map[string]string
+	FieldType map[string]FieldType
+	Order     []string
 }
 
-func init() {
-	fieldType["Description"] = Multiline
-	fieldType["Files"] = Multiline
-	fieldType["Changes"] = Multiline
-	fieldType["Checksums-Sha1"] = Multiline
-	fieldType["Checksums-Sha256"] = Multiline
-	fieldType["Package-List"] = Multiline
-	fieldType["MD5Sum"] = Multiline
-	fieldType["SHA1"] = Multiline
-	fieldType["SHA256"] = Multiline
+// Initialize empty paragraph.
+func NewParagraph() (p Paragraph) {
+	p.Fields = make(map[string]string)
+	p.FieldType = make(map[string]FieldType)
+	p.Order = make([]string, 0)
+
+	return
 }
 
 // Parses a Debian control file and returns a slice of Paragraphs.
@@ -46,7 +44,7 @@ func init() {
 // http://www.debian.org/doc/debian-policy/ch-controlfields.html
 func Parse(input io.Reader) (paragraphs []Paragraph, err error) {
 	reader := bufio.NewReader(input)
-	var paragraph Paragraph
+	paragraph := NewParagraph()
 
 	for {
 		line, err := reader.ReadString('\n')
@@ -60,42 +58,55 @@ func Parse(input io.Reader) (paragraphs []Paragraph, err error) {
 		trimmed := strings.TrimSpace(line)
 
 		// Check if the line is empty (or consists only of whitespace). This
-		// marks a new paragraph.
+		// indicate a new paragraph.
 		if trimmed == "" {
-			if len(paragraph.Fields) > 0 {
+			if paragraph.Len() > 0 {
 				paragraphs = append(paragraphs, paragraph)
 			}
-			paragraph = Paragraph{}
+			paragraph = NewParagraph()
 			continue
 		}
 
-		// folded and multiline fields must start with a space or tab.
+		// Folded and multiline fields must start with a space or tab.
 		if line[0] == ' ' || line[0] == '\t' {
-			lastKey := paragraph.Order[len(paragraph.Order) - 1]
-			if fieldType[lastKey] == Multiline {
-				// Whitespace, including newlines, is significant in the values
-				// of multiline fields, therefore we just append the line
-				// as-is.
-				paragraph.Fields[lastKey] += line
-			} else {
-				// For folded lines we strip whitespace before appending.
-				paragraph.Fields[lastKey] += trimmed
-			}
-		} else {
-			split := strings.Split(trimmed, ":")
-			key := split[0]
-			value := strings.TrimLeftFunc(trimmed[len(key)+1:], unicode.IsSpace)
-			paragraph.Fields[key] = value
-			paragraph.Order = append(paragraph.Order, key)
+			// Let's keep the lines in the original state.
+			// Last key can be empty when paragraph is empty but it doesn't
+			// doesn't affect our use-case.
+			paragraph.Fields[paragraph.LastKey()] += line
+			continue
 		}
+
+		k, v := extractKV(line)
+		// Empty value for a field indicate multiline value.
+		if v == "" {
+			paragraph.FieldType[k] = Multiline
+		}
+
+		paragraph.Set(k, v)
 	}
 
 	// Append last paragraph, but only if it is non-empty.
-	// The case of an empty last paragraph happens when the file ends with a
+	// The last paragraph can be empty when the file ends with a
 	// blank line.
-	if len(paragraph.Fields) > 0 {
+	if paragraph.Len() > 0 {
 		paragraphs = append(paragraphs, paragraph)
 	}
+
+	// Trim values from right.
+	for _, p := range paragraphs {
+		for k, v := range p.Fields {
+			p.Fields[k] = strings.TrimRightFunc(v, unicode.IsSpace)
+		}
+	}
+
+	return
+}
+
+// Extract field and its value from line.
+func extractKV(l string) (k, v string) {
+	split := strings.Split(l, ":")
+	k = split[0]
+	v = strings.TrimLeftFunc(l[len(k)+1:], unicode.IsSpace)
 
 	return
 }
@@ -115,25 +126,56 @@ func (p *Paragraph) String() string {
 		// Multiline fields contains line endings.
 		// To make it uniform let's strip them and add one.
 		vTrimmed := strings.TrimRight(v, "\n")
-		buff.WriteString(k + ": " + vTrimmed + "\n")
+
+		buff.WriteString(k + ":")
+		if p.FieldType[k] == Multiline {
+			buff.WriteString("\n")
+		} else {
+			buff.WriteString(" ")
+		}
+		buff.WriteString(vTrimmed + "\n")
 	}
 	return buff.String()
 }
 
-// Insert k, v fields into paragraph map. If k already exists v is replaced.
+// Convert Paragraphs to multi-line string. Each paragraph is separated with
+// the new line.
+func ParagraphsToText(paragraphs []Paragraph) string {
+	var buff bytes.Buffer
+	paragraphsCount := len(paragraphs) - 1
+
+	for i, p := range paragraphs {
+		fmt.Fprint(&buff, p.String())
+
+		// Don't append the new line after the last paragraph.
+		if i == paragraphsCount {
+			continue
+		}
+
+		buff.WriteString("\n")
+	}
+
+	return buff.String()
+}
+
+// Insert field (k) and its value (v) into paragraph map.
+// If field exists already its value is replaced.
 func (p *Paragraph) Set(k, v string) {
 	p.Fields[k] = v
 	p.Order = append(p.Order, k)
 }
 
+// Get field value based on field name (k).
 func (p *Paragraph) Get(k string) string {
 	return p.Fields[k]
 }
 
+// Get number of fields in a paragraph.
 func (p *Paragraph) Len() int {
 	return len(p.Fields)
 }
 
+// Delete field from a paragraph based on the field name (k).
 func (p *Paragraph) Del(k string) {
 	if _, ok := p.Fields[k]; !ok {
 		return
@@ -143,11 +185,21 @@ func (p *Paragraph) Del(k string) {
 	delItemSlice(k, p.Order)
 }
 
+// Retrieve last key without it's removal.
+func (p *Paragraph) LastKey() string {
+	if len(p.Order) == 0 {
+		return ""
+	}
+	return p.Order[len(p.Order)-1]
+}
+
+// Delete item (x) from slice (s).
 func delItemSlice(x string, s []string) []string {
 	i := getItemPositionSlice(x, s)
 	return delIndexSlice(i, s)
 }
 
+// Get item (x) index position in a slice (s).
 func getItemPositionSlice(x string, s []string) int {
 	for i, v := range s {
 		if x == v {
@@ -157,6 +209,7 @@ func getItemPositionSlice(x string, s []string) int {
 	return -1
 }
 
+// Delete item from slice (s) based on item index position.
 func delIndexSlice(i int, s []string) []string {
 	return append(s[:i], s[i+1:]...)
 }

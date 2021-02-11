@@ -23,15 +23,15 @@ Vcs-Browser: http://anonscm.debian.org/gitweb/?p=collab-maint/aria2.git;a=summar
 Vcs-Git: git://anonscm.debian.org/collab-maint/aria2.git
 Testsuite: autopkgtest
 Build-Depends: autotools-dev, debhelper (>= 7), dpkg-dev (>= 1.16.1~), libc-ares-dev, libgcrypt11-dev (>= 1.5.0-3) | libgcrypt-dev, libgnutls28-dev, libsqlite3-dev, libxml2-dev, pkg-config, zlib1g-dev | libz-dev
-Package-List: 
+Package-List:
  aria2 deb net optional
-Checksums-Sha1: 
+Checksums-Sha1:
  91639bf99a2e84873675f470fd36cee47f466770 2102797 aria2_1.18.5.orig.tar.bz2
  c031efb88a477986dac82477433ee0865643bf27 5428 aria2_1.18.5-1.debian.tar.xz
-Checksums-Sha256: 
+Checksums-Sha256:
  25e21f94bb278a8624e0e4e131e740d105f7d5570290053beb8ae6c33fb9ce3f 2102797 aria2_1.18.5.orig.tar.bz2
  112aa6973779e9ebaf51d8ab445534fffad4562d4e2de3afd3352f3f3b2f6df3 5428 aria2_1.18.5-1.debian.tar.xz
-Files: 
+Files:
  79ddd76decadba7176b27c653f5c5aa2 2102797 aria2_1.18.5.orig.tar.bz2
  3f2a5585139c649765c6fc5db95bb32a 5428 aria2_1.18.5-1.debian.tar.xz
 
@@ -59,10 +59,10 @@ U6LiZnj6CDeY9Xtjsi2l
 	if len(paragraphs) != 1 {
 		t.Fatal("Expected exactly one paragraphs")
 	}
-	if paragraphs[0]["Format"] != "3.0 (quilt)" {
+	if paragraphs[0].Get("Format") != "3.0 (quilt)" {
 		t.Fatal(`"Format" (simple) was not parsed correctly`)
 	}
-	if paragraphs[0]["Testsuite"] != "autopkgtest" {
+	if paragraphs[0].Get("Testsuite") != "autopkgtest" {
 		t.Fatal(`"Testsuite" was not parsed correctly`)
 	}
 }
