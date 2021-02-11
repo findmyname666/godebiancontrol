@@ -111,8 +111,8 @@ func extractKV(l string) (k, v string) {
 	return
 }
 
-// Convert paragraph to string.
-func (p *Paragraph) String() string {
+// Convert paragraph to bytes buffer.
+func (p *Paragraph) Bytes() bytes.Buffer {
 	var buff bytes.Buffer
 
 	for _, k := range p.Order {
@@ -135,12 +135,19 @@ func (p *Paragraph) String() string {
 		}
 		buff.WriteString(vTrimmed + "\n")
 	}
+	return buff
+}
+
+// Convert paragraph to string.
+func (p *Paragraph) String() string {
+	buff := p.Bytes()
+
 	return buff.String()
 }
 
-// Convert Paragraphs to multi-line string. Each paragraph is separated with
+// Convert paragraphs to bytes buffer. Each paragraph is separated with
 // the new line.
-func ParagraphsToText(paragraphs []Paragraph) string {
+func ParagraphsToBytes(paragraphs []Paragraph) bytes.Buffer {
 	var buff bytes.Buffer
 	paragraphsCount := len(paragraphs) - 1
 
@@ -154,6 +161,14 @@ func ParagraphsToText(paragraphs []Paragraph) string {
 
 		buff.WriteString("\n")
 	}
+
+	return buff
+}
+
+// Convert paragraphs to multi-line string. Each paragraph is separated with
+// the new line.
+func ParagraphsToText(paragraphs []Paragraph) string {
+	buff := ParagraphsToBytes(paragraphs)
 
 	return buff.String()
 }
