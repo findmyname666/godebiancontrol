@@ -178,12 +178,19 @@ func ParagraphsToText(paragraphs []Paragraph) string {
 // Insert field (k) and its value (v) into paragraph map.
 // If field exists already its value is replaced.
 func (p *Paragraph) Set(k, v string) {
-	vOld := p.Get(k)
+	_, ok := p.Fields[k]
 
-	if vOld == "" {
+	if !ok {
 		p.Order = append(p.Order, k)
 	}
 
+	p.Fields[k] = v
+}
+
+// Insert field (k) and its value (v) into paragraph map and mark field as
+// multiline type. If field exists already its value is replaced.
+func (p *Paragraph) SetMultiline(k, v string) {
+	p.FieldType[k] = Multiline
 	p.Set(k, v)
 }
 
@@ -204,6 +211,7 @@ func (p *Paragraph) Del(k string) {
 	}
 
 	delete(p.Fields, k)
+	delete(p.FieldType, k)
 	delItemSlice(k, p.Order)
 }
 
@@ -235,3 +243,4 @@ func getItemPositionSlice(x string, s []string) int {
 func delIndexSlice(i int, s []string) []string {
 	return append(s[:i], s[i+1:]...)
 }
+
